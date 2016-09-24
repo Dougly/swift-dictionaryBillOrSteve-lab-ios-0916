@@ -12,40 +12,45 @@ class ViewController: UIViewController {
     
     @IBOutlet weak var fact: UILabel!
     @IBOutlet weak var score: UILabel!
+    @IBOutlet weak var playAgain: UIButton!
     
     // Create your stored properties here
     var facts: [String:[String]] = [:]
     var currentPersonAndFact: (person: String, fact: String) = ("","")
     var scoreTracker = 0
     var currentIndexOfFact = 0
-    var noMoreFacts: (bill: Bool, steve: Bool) = (false, false)
+    var billEmpty = false
+    var steveEmpty = false
 
     override func viewDidLoad() {
         createFacts()
+        playAgain.isHidden = true
         currentPersonAndFact = getRandomFact()
-        print (currentPersonAndFact)
         fact.text = currentPersonAndFact.fact
         super.viewDidLoad()
     }
 
     @IBAction func billClicked(_ sender: AnyObject) {
-        checkForEmptyArrays(billArray: facts["Bill Gates"]!, steveArray: facts["Steve Jobs"]!)
-        checkAnswer(name: "Bill Gates")
-        removeFact()
-        determineNextQuestion()
+        pressedButton(person: "Bill Gates")
     }
     
     @IBAction func steveClicked (_ sender: AnyObject) {
-        checkForEmptyArrays(billArray: facts["Bill Gates"]!, steveArray: facts["Steve Jobs"]!)
-        checkAnswer(name: "Steve Jobs")
-        removeFact()
-        determineNextQuestion()
+        pressedButton(person: "Steve Jobs")
+    }
+    
+    
+    @IBAction func playAgainClicked(_ sender: AnyObject) {
+        viewDidLoad()
+        scoreTracker = 0
+        score.text = String(scoreTracker)
     }
     
     
     
     
     // Helper Functions
+    
+    //pulls random fact for bill or steve from facts dictionary
     func getRandomFact () -> (String, String) {
         
         let person = randomPerson()
@@ -67,58 +72,82 @@ class ViewController: UIViewController {
             break
         }
         if let facts = facts[person] {
-            fact = facts[index]
+            if !facts.isEmpty {
+                fact = facts[index]
+            }
         }
         currentIndexOfFact = index
         return (person, fact)
     }
     
+    //checks to see if answer is correct and increments score
     func checkAnswer (name: String) {
-        if let allFacts = facts[name] {
-            print (allFacts)
-            for listedFact in allFacts {
-                if currentPersonAndFact.fact == listedFact {
-                    scoreTracker += 1
-                    score.text = String(scoreTracker)
-                }
+        if currentPersonAndFact.person == name {
+            scoreTracker += 1
+            score.text = String(scoreTracker)
+        }
+    }
+    
+    //removes current fact from steve or bills array
+    func removeFact () {
+        if var currentFacts = facts[currentPersonAndFact.person] {
+            if !currentFacts.isEmpty {
+                currentFacts.remove(at: currentIndexOfFact)
+                facts[currentPersonAndFact.person] = currentFacts
             }
         }
     }
     
-    func removeFact () {
-        facts[currentPersonAndFact.person]?.remove(at: currentIndexOfFact)
-    }
-    
+    //determines if steve or bill have empty arrays to avoid index out of range exception
     func checkForEmptyArrays (billArray: [String], steveArray: [String]) {
         if !billArray.isEmpty && !steveArray.isEmpty {
-            noMoreFacts = (false,false)
+            billEmpty = false
+            steveEmpty = false
         } else if billArray.isEmpty && !steveArray.isEmpty {
-            noMoreFacts = (true,false)
+            billEmpty = true
+            steveEmpty = false
         } else if !billArray.isEmpty && steveArray.isEmpty {
-            noMoreFacts = (false, true)
+            billEmpty = false
+            steveEmpty = true
         } else {
-            noMoreFacts = (true,true)
+            billEmpty = true
+            steveEmpty = true
         }
     }
     
+    //determins where to grab next question if steve or bill have no more facts
     func determineNextQuestion() {
-        if noMoreFacts == (false, false) {
+        if !billEmpty && !steveEmpty {
             currentPersonAndFact = getRandomFact()
-        } else if noMoreFacts == (true, false) {
+        } else if billEmpty && !steveEmpty {
             currentPersonAndFact.person = "Steve Jobs"
             currentPersonAndFact.fact = facts["Steve Jobs"]![0]
-        } else if noMoreFacts == (false, true) {
+        } else if !billEmpty && steveEmpty {
             currentPersonAndFact.person = "Bill Gates"
             currentPersonAndFact.fact = facts["Bill Gates"]![0]
-        } else if noMoreFacts == (true, true) {
-            fact.text = ("Final Score: \(scoreTracker)")
+        } else {
+            currentPersonAndFact.fact = ("Final Score: \(scoreTracker)/9")
+            currentPersonAndFact.person = "Game Over"
+            playAgain.isHidden = false
         }
     }
     
+    //sequence of actions when button is pressed
+    func pressedButton (person: String) {
+        //checkForEmptyArrays(billArray: facts["Bill Gates"]!, steveArray: facts["Steve Jobs"]!)
+        checkAnswer(name: person)
+        removeFact()
+        checkForEmptyArrays(billArray: facts["Bill Gates"]!, steveArray: facts["Steve Jobs"]!)
+        determineNextQuestion()
+        fact.text = currentPersonAndFact.fact
+    }
+    
+    //chooses random index out of an array
     func randomIndex(fromArray array: [String]) -> Int {
         return Int(arc4random_uniform(UInt32(array.count)))
     }
     
+    //chooses steve or bill randomly
     func randomPerson() -> String {
         let randomNumber = arc4random_uniform(2)
         
@@ -129,6 +158,7 @@ class ViewController: UIViewController {
         }
     }
     
+    //populates facts dictonary
     func createFacts () {
         let billFacts = [
             "He aimed to become a millionaire by the age of 30. However, he became a billionaire at 31.",
@@ -143,10 +173,7 @@ class ViewController: UIViewController {
             "He actually served as a mentor for Google founders Sergey Brin and Larry Page, even sharing some of his advisers with the Google duo.",
             "He was a pescetarian, meaning he ate no meat except for fish."
         ]
-        
         facts["Bill Gates"] = billFacts
         facts["Steve Jobs"] = steveFacts
     }
-    
-    
 }
